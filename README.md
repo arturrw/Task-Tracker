@@ -23,7 +23,7 @@ If you can open a terminal, run `node -v`, `npm -v` and connect to MySQL, you ar
 Clone the repo from GitHub to your computer:
 
 ```bash
-git clone https://github.com/arturrw/task-tracker-university.git
+git clone https://github.com/arturrw/Task-Tracker.git
 ```
 
 After the repo is on your machine go inside the project folder:
