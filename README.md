@@ -1,168 +1,154 @@
-# Task Tracker
+<h1 align="center">Task Tracker</h1>
 
-This is a small web app I wrote to keep track of personal tasks. Nothing huge or enterprise level, just a normal site where you can register, log in add tasks with priority and status and mark things done. There is also a small weather block that looks at the city stored in your profile and asks OpenWeather for the current situation outside. Also there is a quotes.
+<p align="center">
+A small server-rendered task manager: register, log in, create tasks with priority/status/deadline, filter them, and check a weather widget for your city on the dashboard.
+</p>
 
-The project is built on Node.js with Express and EJS on the server side, MySQL for the database, Bootstrap for layout and some simple custom styles and a tiny script for the dashboard.
+<p align="center">
+<img src="https://img.shields.io/badge/-Node.js-339933?style=flat-square&logo=node.js&logoColor=white"/>
+<img src="https://img.shields.io/badge/-Express-000000?style=flat-square&logo=express&logoColor=white"/>
+<img src="https://img.shields.io/badge/-EJS-B4CA65?style=flat-square&logo=ejs&logoColor=black"/>
+<img src="https://img.shields.io/badge/-MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white"/>
+<img src="https://img.shields.io/badge/-Bootstrap-7952B3?style=flat-square&logo=bootstrap&logoColor=white"/>
+<img src="https://img.shields.io/badge/-JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black"/>
+<img src="https://img.shields.io/badge/-MIT_License-000000?style=flat-square"/>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#screenshots">Screenshots</a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/API.md">API</a> ·
+  <a href="docs/CONTRIBUTING.md">Contributing</a>
+</p>
 
 ---
 
-## What you need before you start
+## Screenshots
 
-To make this thing run on your own PC you should have:
-
-- Node.js and npm installed  
-- MySQL server running locally  
-- Git or at least a way to download the repo as a folder  
-
-If you can open a terminal, run `node -v`, `npm -v` and connect to MySQL, you are fine.
+<table>
+  <tr>
+    <td><img src="docs/screenshots/login.png" alt="Login page" width="400"/></td>
+    <td><img src="docs/screenshots/dashboard.png" alt="Dashboard" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Login</sub></td>
+    <td align="center"><sub>Dashboard with stats & weather</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/tasks-list.png" alt="Task list" width="400"/></td>
+    <td><img src="docs/screenshots/tasks-form.png" alt="Task form" width="400"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Task list with filters</sub></td>
+    <td align="center"><sub>Create / edit task</sub></td>
+  </tr>
+</table>
 
 ---
 
-## Getting the code
+## Features
 
-Clone the repo from GitHub to your computer:
+- Email + password authentication (`bcryptjs` hashing, session-based)
+- Create, edit, delete and filter tasks by status and priority
+- Toggle a task between `active` and `completed` with one click
+- Per-user profile (name, city) — city drives the dashboard weather widget
+- Live weather for your city via the OpenWeather API, loaded client-side with a graceful fallback if the key/city is missing
+- Server-rendered pages (EJS) with a small Bootstrap-based UI, no build step
+
+## How it works
+
+```mermaid
+graph TD
+    Browser -->|HTTP| Express[Express App]
+    Express --> Session[express-session]
+    Session --> AuthMW[Auth middleware]
+    AuthMW --> Routes{Routes}
+    Routes --> AuthR[auth.js]
+    Routes --> DashR[dashboard.js]
+    Routes --> TaskR[task.js]
+    Routes --> ProfileR[profile.js]
+    Routes --> ApiR[api.js]
+    AuthR --> UserModel[(userModel)]
+    DashR --> UserModel
+    DashR --> TaskModel[(taskModel)]
+    TaskR --> TaskModel
+    ProfileR --> UserModel
+    ApiR --> Weather[weatherService]
+    UserModel --> MySQL[(MySQL)]
+    TaskModel --> MySQL
+    Weather --> OWM[OpenWeather API]
+```
+
+Full breakdown of layers, the auth sequence, task lifecycle and DB schema lives in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- Node.js and npm
+- A running MySQL server
+- An [OpenWeather](https://openweathermap.org/api) API key (free tier works) if you want the weather widget to actually return data
+
+### Installation
 
 ```bash
 git clone https://github.com/arturrw/Task-Tracker.git
-```
-
-After the repo is on your machine go inside the project folder:
-
-```bash
-cd task-tracker
-```
-
-If the folder name is a bit different in your case, just update it when you run the command.
-
----
-
-## Installation
-
-Inside the project folder install all Node packages:
-
-```bash
+cd Task-Tracker
 npm install
 ```
 
-This reads `package.json` and pulls Express, EJS, MySQL client, sessions, axios and everything else the app needs. The `node_modules` folder will appear automatically, you do not have to touch it.
+### Database setup
 
----
-
-## Database setup
-
-The app expects a MySQL database with a specific structure. I already prepared an sql file for that.
-
-In the project there is a file:
-
-```text
-sql/schema.sql
-```
-
-Open a terminal and log in to MySQL as a user that has enough rights to create databases and users, usually something like:
+Log in to MySQL as a user allowed to create databases/users, then run the provided schema:
 
 ```bash
-mysql -u root -p
+mysql -u root -p < sql/schema.sql
 ```
 
-Once you are inside the MySQL run:
+This creates the `task_tracker_db` database, a `tt_user` MySQL user, and the `users`/`tasks` tables.
 
-```sql
-SOURCE /full/path/to/sql/schema.sql;
+> The schema ships with a placeholder password (`strong_password_here`) for `tt_user`. Change it in `sql/schema.sql` before running it, and use the same value in `.env`.
+
+### Environment variables
+
+Copy the example file and fill in your own values:
+
+```bash
+cp .env.example .env
 ```
 
-or, if you are already in the project folder and MySQL is started with the right working directory:
+| Variable | Description |
+|---|---|
+| `PORT` | Port the server listens on (default `3000`) |
+| `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | MySQL connection details |
+| `SESSION_SECRET` | Random string used to sign the session cookie |
+| `WEATHER_API_KEY` | Your OpenWeather API key |
+| `WEATHER_API_BASE_URL` | OpenWeather endpoint (defaults to the current-weather API) |
 
-```sql
-SOURCE sql/schema.sql;
-```
+`.env` is git-ignored — never commit real secrets in it.
 
-This script will:
-
-- create a database `task_tracker_db`
-- create a user `tt_user` with a password from the script
-- User access to the new database
-- create `users` and `tasks` tables with the columns that the app expects
----
-
-## Environment variables
-
-In the root of the project there is a file named `.env.example`. This is a template with all the variables the app uses.
-
-Create your own `.env` file based on it.
-
-On Windows you can create a new file called `.env` and copy the values from `.env.example` by hand.
-
-Then open `.env` in any editor and fill in the values:
-
-```env
-PORT=3000
-
-DB_HOST=localhost
-DB_USER=tt_user
-DB_PASSWORD=strong_password_here
-DB_NAME=task_tracker_db
-
-SESSION_SECRET=some_secret_string_here
-
-WEATHER_API_KEY=your_openweather_api_key_here
-WEATHER_API_BASE_URL=https://api.openweathermap.org/data/2.5/weather
-```
----
-
-## Running the server
-
-After the database and `.env` are ready go back to your terminal in the project folder and run:
+### Running
 
 ```bash
 npm start
 ```
 
-This command just runs:
-
-```bash
-node server.js
-```
-
-in the background because that is how it is defined in `package.json`.
-
-If everything is fine, you should see something like:
-
-```text
-Server is running on http://localhost:3000
-```
-
-Open the browser and go to:
-
-```text
-http://localhost:3000
-```
-
-If you are not logged in yet the app will send you to the login and registration pages first.
+Then open [http://localhost:3000](http://localhost:3000). You'll be redirected to `/login` until you register an account.
 
 ---
 
-## Quick tour of how to use it
+## API
 
-The flow is pretty simple:
+The app is mostly server-rendered pages, plus one JSON endpoint (`GET /api/weather`) used by the dashboard. Full request/response shapes and the full route table are in **[docs/API.md](docs/API.md)**.
 
-1. First create an account.  
-   Go to the registration page, fill in email, password and optional fields like name and city. The city is later used for the weather block on the dashboard.
+## Contributing
 
-2. Log in.  
-   After registration you can log in with the same email and password. A session is created for you using `express-session`.
+Bug reports, small fixes and feature ideas are welcome. See **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** for branch naming, code style and how to test your change locally before opening a PR.
 
-3. Work with tasks.  
-   On the tasks screen you can create a new task with a title, description, priority, status, category and deadline. Later you can edit tasks, change status when something is completed or archive what you no longer need. There are filters to narrow down tasks by status or priority so the list does not become a complete mess.
+## License
 
-4. Check your profile and weather.  
-   In the profile page you can update your name and city. After that, when you open the dashboard, the app will try to load weather data for that city using your OpenWeather key from `.env`.
-
-If you break something in the database or in the environment file, the most common result is that the server throws errors about connection problems or missing tables. In that case I usually go back to `schema.sql`, run it again.
-
----
-
-## Stopping the app
-
-To stop the server just go to the terminal where it is running and press `Ctrl + C`. The port will be end and you can start it again later with `npm start`.
-
----
+[MIT](LICENSE) © arturrw
